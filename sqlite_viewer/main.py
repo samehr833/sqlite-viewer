@@ -7,6 +7,40 @@ import json
 import csv
 import platform
 
+def series_gradient(text, start_rgb=(255, 140, 0), end_rgb=(255, 255, 255)):
+    lines = text.splitlines()
+    total_chars = sum(len(line) for line in lines)
+    result = ""
+    idx = 0
+    for line in lines:
+        for ch in line:
+            if total_chars > 1:
+                t = idx / (total_chars - 1)
+            else:
+                t = 0
+            r = int(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * t)
+            g = int(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * t)
+            b = int(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * t)
+            result += f"\033[38;2;{r};{g};{b}m{ch}\033[0m"
+            idx += 1
+        result += "\n"
+    return result
+
+ascii_art = r"""
+ __    __  _______  
+/  |  /  |/       \ 
+$$ |  $$ |$$$$$$$  |
+$$  \/$$/ $$ |__$$ |
+ $$  $$<  $$    $$< 
+  $$$$  \ $$$$$$$  |
+ $$ /$$  |$$ |  $$ |
+$$ |  $$ |$$ |  $$ |
+$$/   $$/ $$/   $$/ 
+"""
+
+studio_text = series_gradient("XR Studio", (255, 140, 0), (255, 200, 100))
+series_text = series_gradient("Coded By CommandO", (255, 200, 100), (255, 255, 255))
+
 _cb1 = "Created By CommandO"
 _cb2 = "Created By CommandO"
 _cb3 = "Created By CommandO"
@@ -19,16 +53,32 @@ def clear_screen():
     else:
         os.system('clear')
 
-ASCII_ART = """
- ▗▄▄▖ ▗▄▖ ▗▖  ▗▖▗▖  ▗▖ ▗▄▖ ▗▖  ▗▖▗▄▄▄  ▗▄▖ 
-▐▌   ▐▌ ▐▌▐▛▚▞▜▌▐▛▚▞▜▌▐▌ ▐▌▐▛▚▖▐▌▐▌  █▐▌ ▐▌
-▐▌   ▐▌ ▐▌▐▌  ▐▌▐▌  ▐▌▐▛▀▜▌▐▌ ▝▜▌▐▌  █▐▌ ▐▌
-▝▚▄▄▖▝▚▄▞▘▐▌  ▐▌▐▌  ▐▌▐▌ ▐▌▐▌  ▐▌▐▙▄▄▀▝▚▄▞▘
-"""
-print(f"\n{'='*60}")
-print(f"SQLite Viewer - Created By CommandO")
-print(f"In Collaboration With XR Studio")
-print(f"{'='*60}\n")
+def print_banner():
+    clear_screen()
+    print(series_gradient(ascii_art, (255, 140, 0), (255, 255, 255)))
+    print("=" * 50)
+    print(f" {studio_text} | {series_text}")
+    print("=" * 50)
+    if hasattr(SQLiteViewer, 'current_db') and SQLiteViewer.current_db:
+        print(f" DB: {SQLiteViewer.current_db}")
+    print()
+
+def print_main_menu():
+    print("=" * 50)
+    print(" MAIN MENU")
+    print("=" * 50)
+    print(" 1  | Open DB")
+    print(" 2  | Show tables")
+    print(" 3  | View data")
+    print(" 4  | SQL query")
+    print(" 5  | Export CSV")
+    print(" 6  | Export JSON")
+    print(" 7  | Close DB")
+    print(" 8  | Browse files")
+    print(" 0  | Exit")
+    print("=" * 50)
+    print(f" {series_gradient('XR Studio', (255,140,0), (255,255,255))}")
+    print("=" * 50)
 
 CONFIG_FILE = os.path.expanduser("~/.sqlite_viewer_config.json")
 CURRENT_PATH = os.getcwd()
@@ -44,9 +94,9 @@ def save_last_db(db_path):
     with open(CONFIG_FILE, 'w') as f:
         json.dump({'last_db': db_path}, f)
 
-def format_table(columns, data, max_rows=20):
+def format_table(columns, data, max_rows=15):
     if not data:
-        return "No data found"
+        return "No data"
     
     col_widths = [len(col) for col in columns]
     for row in data[:max_rows]:
@@ -54,9 +104,7 @@ def format_table(columns, data, max_rows=20):
             col_widths[i] = max(col_widths[i], len(str(cell)))
     
     separator = "+" + "+".join("-" * (w + 2) for w in col_widths) + "+"
-    
     header = "| " + " | ".join(col.ljust(col_widths[i]) for i, col in enumerate(columns)) + " |"
-    
     rows = []
     for row in data[:max_rows]:
         row_str = "| " + " | ".join(str(cell).ljust(col_widths[i]) for i, cell in enumerate(row)) + " |"
@@ -65,7 +113,7 @@ def format_table(columns, data, max_rows=20):
     result = separator + "\n" + header + "\n" + separator + "\n" + "\n".join(rows) + "\n" + separator
     
     if len(data) > max_rows:
-        result += f"\n\nShowing {max_rows} of {len(data)} rows"
+        result += f"\n{max_rows} of {len(data)} rows"
     
     return result
 
@@ -86,72 +134,50 @@ def list_directory(path):
     return items
 
 def format_directory(items, current_path):
-    result = f"\nCurrent Directory: {current_path}\n"
-    result += "=" * 60 + "\n"
-    result += " 0  | .. (Go back)\n"
-    
+    result = f"\n{current_path}\n"
+    result += "-" * 40 + "\n"
+    result += " 0  | ..\n"
     idx = 1
     for item in items:
         if item['type'] == 'dir':
-            result += f" {idx:2} | [DIR]  {item['name']}\n"
+            result += f" {idx:2} | D {item['name']}\n"
         elif item['type'] == 'file':
-            result += f" {idx:2} | [FILE] {item['name']} ({item['size']} bytes)\n"
+            if item['name'].endswith(('.db', '.sqlite', '.sqlite3')):
+                result += f" {idx:2} | * {item['name']}\n"
+            else:
+                result += f" {idx:2} | F {item['name']}\n"
         else:
-            result += f" {idx:2} | [ERR]  {item['name']}\n"
+            result += f" {idx:2} | ? {item['name']}\n"
         idx += 1
-    
-    result += "=" * 60 + "\n"
+    result += "-" * 40
     return result, items
 
 class SQLiteViewer:
+    current_db = None
+    
     def __init__(self):
         self.connection = None
         self.cursor = None
         self.current_db = None
         self.running = True
         self.current_path = CURRENT_PATH
-
-    def print_banner(self):
-        clear_screen()
-        print(ASCII_ART)
-        print(f"SQLite Viewer - Created By CommandO [{SYSTEM}]")
-        print("=" * 60)
-        if self.current_db:
-            print(f"Connected to: {self.current_db}")
-        print()
-
-    def print_main_menu(self):
-        print("=" * 60)
-        print("MAIN MENU - Enter number:")
-        print("=" * 60)
-        print("  1  | Open SQLite database")
-        print("  2  | Show tables")
-        print("  3  | View table data")
-        print("  4  | Execute SQL query")
-        print("  5  | Export table to CSV")
-        print("  6  | Export table to JSON")
-        print("  7  | Close database")
-        print("  8  | Browse files")
-        print("  0  | Exit")
-        print("=" * 60)
-        print("Created By CommandO | In Collaboration With XR Studio")
+        SQLiteViewer.current_db = None
 
     def wait_for_enter(self):
-        input("\nPress Enter to continue...")
+        input("\n[ENTER] ")
 
     def browse_and_open_file(self):
         while True:
             items = list_directory(self.current_path)
             dir_text, dir_items = format_directory(items, self.current_path)
             clear_screen()
-            self.print_banner()
+            print_banner()
             print(dir_text)
             
-            choice = input("\nEnter number (0=back, b=main menu): ").strip()
+            choice = input("\n[0=back b=menu] > ").strip()
             
             if choice.lower() == 'b':
                 return None
-            
             if choice == '0':
                 parent = os.path.dirname(self.current_path)
                 if parent != self.current_path:
@@ -165,10 +191,10 @@ class SQLiteViewer:
                     if selected['type'] == 'dir':
                         self.current_path = selected['path']
                     elif selected['type'] == 'file':
-                        if selected['name'].endswith('.db') or selected['name'].endswith('.sqlite') or selected['name'].endswith('.sqlite3'):
+                        if selected['name'].endswith(('.db', '.sqlite', '.sqlite3')):
                             return selected['path']
                         else:
-                            print(f"Not a database file: {selected['name']}")
+                            print(f"Not DB: {selected['name']}")
                             self.wait_for_enter()
                     continue
             except ValueError:
@@ -177,26 +203,26 @@ class SQLiteViewer:
             if os.path.exists(choice):
                 if os.path.isdir(choice):
                     self.current_path = choice
-                elif choice.endswith('.db') or choice.endswith('.sqlite') or choice.endswith('.sqlite3'):
+                elif choice.endswith(('.db', '.sqlite', '.sqlite3')):
                     return choice
                 else:
-                    print("Not a database file")
+                    print("Not DB")
                     self.wait_for_enter()
             else:
-                print(f"Path not found: {choice}")
+                print(f"Not found: {choice}")
                 self.wait_for_enter()
 
     def open_db(self, db_path):
         if not os.path.exists(db_path):
-            return False, f"File not found: {db_path}"
-        
+            return False, f"Not found: {db_path}"
         try:
             if self.connection:
                 self.connection.close()
             self.connection = sqlite3.connect(db_path)
             self.cursor = self.connection.cursor()
             self.current_db = db_path
-            return True, f"Database opened: {db_path}"
+            SQLiteViewer.current_db = db_path
+            return True, f"Opened: {db_path}"
         except Exception as e:
             return False, f"Error: {str(e)}"
 
@@ -206,7 +232,8 @@ class SQLiteViewer:
             self.connection = None
             self.cursor = None
             self.current_db = None
-        return True, "Database closed"
+            SQLiteViewer.current_db = None
+        return True, "Closed"
 
     def get_tables(self):
         if not self.cursor:
@@ -214,7 +241,7 @@ class SQLiteViewer:
         self.cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         return [row[0] for row in self.cursor.fetchall()]
 
-    def get_table_data(self, table_name, limit=50):
+    def get_table_data(self, table_name, limit=30):
         if not self.cursor:
             return [], []
         self.cursor.execute(f"SELECT * FROM {table_name} LIMIT {limit}")
@@ -241,25 +268,21 @@ class SQLiteViewer:
 
     def export_csv(self, table_name, output_file):
         if not self.cursor:
-            return False, "No database open"
-        
+            return False, "No DB"
         data, columns, total = self.get_table_data(table_name, 999999)
-        
         try:
             with open(output_file, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
                 writer.writerow(columns)
                 writer.writerows(data)
-            return True, f"Exported to {output_file}"
+            return True, f"Saved: {output_file}"
         except Exception as e:
             return False, str(e)
 
     def export_json(self, table_name, output_file):
         if not self.cursor:
-            return False, "No database open"
-        
+            return False, "No DB"
         data, columns, total = self.get_table_data(table_name, 999999)
-        
         try:
             result = []
             for row in data:
@@ -269,63 +292,62 @@ class SQLiteViewer:
                 result.append(item)
             with open(output_file, 'w', encoding='utf-8') as f:
                 json.dump(result, f, indent=2, ensure_ascii=False)
-            return True, f"Exported to {output_file}"
+            return True, f"Saved: {output_file}"
         except Exception as e:
             return False, str(e)
 
     def run(self):
         last_db = load_last_db()
         if last_db and os.path.exists(last_db):
-            success, msg = self.open_db(last_db)
+            self.open_db(last_db)
         
         while self.running:
-            self.print_banner()
-            self.print_main_menu()
+            print_banner()
+            print_main_menu()
             
             try:
                 cmd = input("\n> ").strip().lower()
                 
-                if cmd == "1" or cmd == "open":
+                if cmd in ["1", "open"]:
                     db_path = self.browse_and_open_file()
                     if db_path:
                         success, msg = self.open_db(db_path)
                         clear_screen()
-                        self.print_banner()
+                        print_banner()
                         print(msg)
                         if success:
                             save_last_db(db_path)
                     self.wait_for_enter()
                 
-                elif cmd == "2" or cmd == "show":
+                elif cmd in ["2", "show"]:
                     clear_screen()
-                    self.print_banner()
+                    print_banner()
                     if not self.current_db:
-                        print("No database open. Use option 1 first")
+                        print("No DB")
                     else:
                         tables = self.get_tables()
                         if tables:
                             print("\nTABLES:")
-                            print("-" * 40)
                             for t in tables:
-                                print(f"  - {t}")
+                                print(f" - {t}")
                         else:
-                            print("No tables found")
+                            print("No tables")
                     self.wait_for_enter()
                 
-                elif cmd == "3" or cmd == "view":
+                elif cmd in ["3", "view"]:
                     clear_screen()
-                    self.print_banner()
+                    print_banner()
                     if not self.current_db:
-                        print("No database open. Use option 1 first")
+                        print("No DB")
                     else:
                         tables = self.get_tables()
                         if not tables:
-                            print("No tables found")
+                            print("No tables")
                         else:
-                            print("\nAvailable tables:")
+                            print("\nTables:")
                             for i, t in enumerate(tables, 1):
-                                print(f"  {i}. {t}")
-                            choice = input("\nEnter table name or number: ").strip()
+                                print(f" {i}. {t}")
+                            choice = input("\nTable > ").strip()
                             try:
                                 num = int(choice)
                                 if 1 <= num <= len(tables):
@@ -334,48 +356,47 @@ class SQLiteViewer:
                                     table = choice
                             except:
                                 table = choice
-                            
-                            limit = input("Rows to show (default 50): ").strip()
-                            limit = int(limit) if limit.isdigit() else 50
+                            limit = input("Rows [30]: ").strip()
+                            limit = int(limit) if limit.isdigit() else 30
                             data, columns, total = self.get_table_data(table, limit)
                             if data:
-                                print(f"\nTable: {table} (Total rows: {total})")
+                                print(f"\n{table} ({total} rows)")
                                 print(format_table(columns, data))
                             else:
-                                print(f"No data in table '{table}'")
+                                print(f"No data")
                     self.wait_for_enter()
                 
-                elif cmd == "4" or cmd == "query":
+                elif cmd in ["4", "query"]:
                     clear_screen()
-                    self.print_banner()
+                    print_banner()
                     if not self.current_db:
-                        print("No database open. Use option 1 first")
+                        print("No DB")
                     else:
-                        query = input("Enter SQL query: ").strip()
+                        query = input("SQL > ").strip()
                         success, data, columns = self.execute_query(query)
                         if success:
                             if data:
                                 print(format_table(columns, data))
                             else:
-                                print("Query executed successfully (no results)")
+                                print("Done")
                         else:
-                            print(f"Error: {columns[0] if columns else 'Unknown error'}")
+                            print(f"Error: {columns[0] if columns else '?'}")
                     self.wait_for_enter()
                 
-                elif cmd == "5" or cmd == "export":
+                elif cmd in ["5", "export"]:
                     clear_screen()
-                    self.print_banner()
+                    print_banner()
                     if not self.current_db:
-                        print("No database open. Use option 1 first")
+                        print("No DB")
                     else:
                         tables = self.get_tables()
                         if not tables:
-                            print("No tables found")
+                            print("No tables")
                         else:
-                            print("\nAvailable tables:")
+                            print("\nTables:")
                             for i, t in enumerate(tables, 1):
-                                print(f"  {i}. {t}")
-                            choice = input("\nEnter table name or number: ").strip()
+                                print(f" {i}. {t}")
+                            choice = input("\nTable > ").strip()
                             try:
                                 num = int(choice)
                                 if 1 <= num <= len(tables):
@@ -384,8 +405,7 @@ class SQLiteViewer:
                                     table = choice
                             except:
                                 table = choice
-                            
-                            output = input("Output file name (table.csv): ").strip()
+                            output = input("File [table.csv]: ").strip()
                             if not output:
                                 output = f"{table}.csv"
                             if not output.endswith('.csv'):
@@ -394,20 +414,20 @@ class SQLiteViewer:
                             print(msg)
                     self.wait_for_enter()
                 
-                elif cmd == "6" or cmd == "exportj":
+                elif cmd in ["6", "exportj"]:
                     clear_screen()
-                    self.print_banner()
+                    print_banner()
                     if not self.current_db:
-                        print("No database open. Use option 1 first")
+                        print("No DB")
                     else:
                         tables = self.get_tables()
                         if not tables:
-                            print("No tables found")
+                            print("No tables")
                         else:
-                            print("\nAvailable tables:")
+                            print("\nTables:")
                             for i, t in enumerate(tables, 1):
-                                print(f"  {i}. {t}")
-                            choice = input("\nEnter table name or number: ").strip()
+                                print(f" {i}. {t}")
+                            choice = input("\nTable > ").strip()
                             try:
                                 num = int(choice)
                                 if 1 <= num <= len(tables):
@@ -416,8 +436,7 @@ class SQLiteViewer:
                                     table = choice
                             except:
                                 table = choice
-                            
-                            output = input("Output file name (table.json): ").strip()
+                            output = input("File [table.json]: ").strip()
                             if not output:
                                 output = f"{table}.json"
                             if not output.endswith('.json'):
@@ -426,44 +445,46 @@ class SQLiteViewer:
                             print(msg)
                     self.wait_for_enter()
                 
-                elif cmd == "7" or cmd == "close":
+                elif cmd in ["7", "close"]:
                     clear_screen()
-                    self.print_banner()
+                    print_banner()
                     success, msg = self.close_db()
                     print(msg)
                     self.wait_for_enter()
                 
-                elif cmd == "8" or cmd == "browse":
+                elif cmd in ["8", "browse"]:
                     db_path = self.browse_and_open_file()
                     if db_path:
                         success, msg = self.open_db(db_path)
                         clear_screen()
-                        self.print_banner()
+                        print_banner()
                         print(msg)
                         if success:
                             save_last_db(db_path)
                     self.wait_for_enter()
                 
-                elif cmd == "0" or cmd == "exit":
+                elif cmd in ["0", "exit"]:
                     clear_screen()
-                    print(ASCII_ART)
-                    print("\nGoodbye - Created By CommandO")
-                    print("=" * 60)
+                    print(series_gradient(ascii_art, (255, 140, 0), (255, 255, 255)))
+                    print("\nGoodbye")
+                    print("=" * 50)
+                    print(f" {series_gradient('XR Studio', (255,140,0), (255,255,255))}")
+                    print("=" * 50)
                     self.close_db()
                     self.running = False
                 
                 else:
                     clear_screen()
-                    self.print_banner()
-                    print(f"Unknown command: {cmd}")
-                    print("Please enter a number from 0 to 8")
+                    print_banner()
+                    print(f"Unknown: {cmd}")
+                    print("Use 0-8")
                     self.wait_for_enter()
             
             except KeyboardInterrupt:
                 clear_screen()
-                print(ASCII_ART)
-                print("\nGoodbye - Created By CommandO")
-                print("=" * 60)
+                print(series_gradient(ascii_art, (255, 140, 0), (255, 255, 255)))
+                print("\nGoodbye")
+                print("=" * 50)
                 self.close_db()
                 self.running = False
             except Exception as e:

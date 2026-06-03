@@ -1,0 +1,27 @@
+# build.spec
+a = Analysis(['main.py', 'config.py', 'database.py', 'export.py', 'viewer.py'],
+             pathex=[],
+             binaries=[],
+             datas=[],
+             hiddenimports=['tabulate', 'colorama'],
+             hookspath=[],
+             runtime_hooks=[],
+             excludes=[],
+             win_no_prefer_redirects=False,
+             win_private_assemblies=False,
+             cipher=None,
+             noarchive=False)
+pyz = PYZ(a.pure)
+exe = EXE(pyz,
+          a.scripts,
+          a.binaries,
+          a.datas,
+          [],
+          name='SQLite_Viewer',
+          debug=False,
+          bootloader_ignore_signals=False,
+          strip=False,
+          upx=True,
+          upx_exclude=[],
+          runtime_tmpdir=None,
+          console=True)

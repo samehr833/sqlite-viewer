@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import sys
 import os
@@ -7,43 +6,18 @@ import json
 import csv
 import platform
 
-def series_gradient(text, start_rgb=(255, 140, 0), end_rgb=(255, 255, 255)):
-    lines = text.splitlines()
-    total_chars = sum(len(line) for line in lines)
-    result = ""
-    idx = 0
-    for line in lines:
-        for ch in line:
-            if total_chars > 1:
-                t = idx / (total_chars - 1)
-            else:
-                t = 0
-            r = int(start_rgb[0] + (end_rgb[0] - start_rgb[0]) * t)
-            g = int(start_rgb[1] + (end_rgb[1] - start_rgb[1]) * t)
-            b = int(start_rgb[2] + (end_rgb[2] - start_rgb[2]) * t)
-            result += f"\033[38;2;{r};{g};{b}m{ch}\033[0m"
-            idx += 1
-        result += "\n"
-    return result
+RED = '\033[91m'
+RESET = '\033[0m'
+LINE = "─" * 50
 
 ascii_art = r"""
- __    __  _______  
-/  |  /  |/       \ 
-$$ |  $$ |$$$$$$$  |
-$$  \/$$/ $$ |__$$ |
- $$  $$<  $$    $$< 
-  $$$$  \ $$$$$$$  |
- $$ /$$  |$$ |  $$ |
-$$ |  $$ |$$ |  $$ |
-$$/   $$/ $$/   $$/ 
+ __   __        _____ _             _ _        
+ \ \ / /       / ____| |           | (_)       
+  \ V / _ __  | (___ | |_ _   _  __| |_  ___   
+   > < | '__|  \___ \| __| | | |/ _` | |/ _ \  
+  / . \| |     ____) | |_| |_| | (_| | | (_) | 
+ /_/ \_\_|    |_____/ \__|\__,_|\__,_|_|\___/  
 """
-
-studio_text = series_gradient("XR Studio", (255, 140, 0), (255, 200, 100))
-series_text = series_gradient("Coded By CommandO", (255, 200, 100), (255, 255, 255))
-
-_cb1 = "Created By CommandO"
-_cb2 = "Created By CommandO"
-_cb3 = "Created By CommandO"
 
 SYSTEM = platform.system()
 
@@ -55,18 +29,18 @@ def clear_screen():
 
 def print_banner():
     clear_screen()
-    print(series_gradient(ascii_art, (255, 140, 0), (255, 255, 255)))
-    print("=" * 50)
-    print(f" {studio_text} | {series_text}")
-    print("=" * 50)
+    print(RED + ascii_art + RESET)
+    print(LINE)
+    print(f" {RED}Xr Studio{RESET} | {RED}Coded By Commando{RESET}")
+    print(LINE)
     if hasattr(SQLiteViewer, 'current_db') and SQLiteViewer.current_db:
         print(f" DB: {SQLiteViewer.current_db}")
     print()
 
 def print_main_menu():
-    print("=" * 50)
+    print(LINE)
     print(" MAIN MENU")
-    print("=" * 50)
+    print(LINE)
     print(" 1  | Open DB")
     print(" 2  | Show tables")
     print(" 3  | View data")
@@ -76,9 +50,9 @@ def print_main_menu():
     print(" 7  | Close DB")
     print(" 8  | Browse files")
     print(" 0  | Exit")
-    print("=" * 50)
-    print(f" {series_gradient('XR Studio', (255,140,0), (255,255,255))}")
-    print("=" * 50)
+    print(LINE)
+    print(f" {RED}Xr Studio{RESET}")
+    print(LINE)
 
 CONFIG_FILE = os.path.expanduser("~/.sqlite_viewer_config.json")
 CURRENT_PATH = os.getcwd()
@@ -243,7 +217,7 @@ class SQLiteViewer:
 
     def get_table_data(self, table_name, limit=30):
         if not self.cursor:
-            return [], []
+            return [], [], 0
         self.cursor.execute(f"SELECT * FROM {table_name} LIMIT {limit}")
         data = self.cursor.fetchall()
         self.cursor.execute(f"SELECT COUNT(*) FROM {table_name}")
@@ -363,7 +337,7 @@ class SQLiteViewer:
                                 print(f"\n{table} ({total} rows)")
                                 print(format_table(columns, data))
                             else:
-                                print(f"No data")
+                                print("No data")
                     self.wait_for_enter()
                 
                 elif cmd in ["4", "query"]:
@@ -465,11 +439,11 @@ class SQLiteViewer:
                 
                 elif cmd in ["0", "exit"]:
                     clear_screen()
-                    print(series_gradient(ascii_art, (255, 140, 0), (255, 255, 255)))
+                    print(RED + ascii_art + RESET)
                     print("\nGoodbye")
-                    print("=" * 50)
-                    print(f" {series_gradient('XR Studio', (255,140,0), (255,255,255))}")
-                    print("=" * 50)
+                    print(LINE)
+                    print(f" {RED}Xr Studio{RESET}")
+                    print(LINE)
                     self.close_db()
                     self.running = False
                 
@@ -482,9 +456,9 @@ class SQLiteViewer:
             
             except KeyboardInterrupt:
                 clear_screen()
-                print(series_gradient(ascii_art, (255, 140, 0), (255, 255, 255)))
+                print(RED + ascii_art + RESET)
                 print("\nGoodbye")
-                print("=" * 50)
+                print(LINE)
                 self.close_db()
                 self.running = False
             except Exception as e:
@@ -494,7 +468,3 @@ class SQLiteViewer:
 if __name__ == "__main__":
     app = SQLiteViewer()
     app.run()
-
-_cc1 = "Created By CommandO"
-_cc2 = "Created By CommandO"
-_cc3 = "Created By CommandO"
